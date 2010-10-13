@@ -191,18 +191,14 @@ handle_cast(trade_resources, State) ->
         nodes(known)),
     {noreply, State};
 handle_cast({trade_resources, {ReplyTo, Remotes}}, State) ->
+    error_logger:info_msg("got remotes ~p~n", [Remotes]),
     Locals = rd_store:get_local_resource_tuples(),
     TargetTypes = rd_store:get_target_types(),
     FilteredRemotes = filter_resource_tuples_by_types(TargetTypes, Remotes),
+    error_logger:info_msg("got remotes and filtered ~p~n", [FilteredRemotes]),
     rd_store:store_resource_tuples(FilteredRemotes),
     make_callbacks(FilteredRemotes),
-    case ReplyTo of
-        noreply ->
-            ok;
-        _ ->
-            gen_server:cast({?SERVER, ReplyTo},
-                            {trade_resources, {noreply, Locals}})
-    end,
+    reply(ReplyTo, Locals),
     {noreply, State}.
 
 handle_info(_Info, State) ->
@@ -243,3 +239,11 @@ make_callbacks(NewResources) ->
 			    NewResources)
       end,
       rd_store:get_callback_modules()).
+
+reply(noreply, _LocalResources) ->
+    ok;
+reply(_ReplyTo, []) ->
+    ok;
+reply(ReplyTo, LocalResources) ->
+    gen_server:cast({?SERVER, ReplyTo},
+		    {trade_resources, {noreply, LocalResources}}).

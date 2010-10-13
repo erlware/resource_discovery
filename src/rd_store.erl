@@ -192,6 +192,8 @@ store_resource_tuple({Type, Resource}) when is_atom(Type) ->
     ets:insert(?RS, {Type, [Resource|get_resources(Type)]}).
 
 -spec store_resource_tuples([resource_tuple()]) -> no_return().
+store_resource_tuples([]) ->
+    ok;
 store_resource_tuples([{_,_}|_] = ResourceTuples) ->
     lists:foreach(fun(ResourceTuple) ->
 			  store_resource_tuple(ResourceTuple)

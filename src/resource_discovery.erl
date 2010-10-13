@@ -28,15 +28,18 @@
 % Add
 -export([
          add_local_resource_tuples/1,
+         add_local_resource_tuple/1,
          add_target_resource_types/1,
-         add_callback_modules/1
+         add_target_resource_type/1,
+         add_callback_modules/1,
+         add_callback_module/1
         ]).
 
 % Get
 -export([
          get_resource/1, 
          get_resource/2, 
-         get_all_resources/1, 
+         get_resources/1, 
          get_num_resource/1, 
          get_resource_types/0,
          get_num_resource_types/0,
@@ -47,8 +50,7 @@
 -export([
          delete_local_resource_tuple/1,
          delete_target_resource_type/1,
-         delete_resource/2, 
-         delete_resource/1 
+         delete_resource_tuple/1 
         ]).
 
 % Other
@@ -59,7 +61,6 @@
         ]).
 
 -include("resource_discovery.hrl").
--include("macros.hrl").
 
 %%--------------------------------------------------------------------
 %% Macros
@@ -76,12 +77,10 @@
 %% @end
 %%--------------------------------------------------------------------
 start(_Type, StartArgs) ->
-    case rd_sup:start_link(StartArgs) of
-        {ok, Pid} ->
-            {ok, Pid};
-        Error ->
-            Error
-    end.
+    % Create the storage for the local parameters; i.e. LocalTypes 
+    % and TargetTypes.
+    rd_store:new(),
+    rd_sup:start_link(StartArgs).
 
 %%--------------------------------------------------------------------
 %% @doc inform an rd_core server of local resources and target types.
@@ -101,16 +100,24 @@ trade_resources() ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec add_target_resource_types([resource_type()]) -> no_return().
-add_target_resource_types(TargetTypes) -> 
+add_target_resource_types([H|_] = TargetTypes) when is_atom(H) -> 
     rd_store:store_target_resource_types(TargetTypes).
+
+-spec add_target_resource_type(resource_type()) -> no_return().
+add_target_resource_type(TargetType) when is_atom(TargetType) -> 
+    add_target_resource_types([TargetType]).
 
 %%------------------------------------------------------------------------------
 %% @doc Adds to the list of local resource tuples. 
 %% @end
 %%------------------------------------------------------------------------------
 -spec add_local_resource_tuples([resource_tuple()]) -> no_return().
-add_local_resource_tuples(LocalResourceTuples) -> 
-    rd_store:store_local_resources(LocalResourceTuples).
+add_local_resource_tuples([{T,_}|_] = LocalResourceTuples) when is_atom(T) -> 
+    rd_store:store_local_resource_tuples(LocalResourceTuples).
+
+-spec add_local_resource_tuple(resource_tuple()) -> no_return().
+add_local_resource_tuple({T,_} = LocalResourceTuple) when is_atom(T) -> 
+    add_local_resource_tuples([LocalResourceTuple]).
 
 %%------------------------------------------------------------------------------
 %% @doc Add a callback module or modules to the list of callbacks to be
@@ -118,16 +125,12 @@ add_local_resource_tuples(LocalResourceTuples) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec add_callback_modules([atom()]) -> no_return().
-add_callback_modules(Modules) ->
+add_callback_modules([H|_] = Modules) when is_atom(H) ->
     rd_store:store_callback_modules(Modules).
 
-%%------------------------------------------------------------------------------
-%% @doc Returns a cached resource.
-%% @end
-%%------------------------------------------------------------------------------
--spec get_resource(resource_type()) -> {ok, resource()} | {error, no_resources}.
-get_resource(Type) ->
-    gen_server:call(?RD, {get_resource, Type}). 
+-spec add_callback_module(atom()) -> no_return().
+add_callback_module(Module) when is_atom(Module) ->
+    add_callback_modules([Module]).
 
 %%------------------------------------------------------------------------------
 %% @doc Replies with the cached resource at the index specified. If for example we had
@@ -138,29 +141,34 @@ get_resource(Type) ->
 %%------------------------------------------------------------------------------
 -spec get_resource(resource_type(), pos_integer()) -> {ok, resource()} | {error, no_resources}.
 get_resource(Type, Index) ->
-    gen_server:call(?RD, {get_resource, Type, Index}). 
+    rd_core:index_get(Type, Index). 
+
+%%------------------------------------------------------------------------------
+%% @doc Replies with the cached resource. Round robins though the resources
+%%      cached.
+%% @spec (resource_type(), Index::integer()) -> {ok, resource()} | {error, no_resources}
+%% @end
+%%------------------------------------------------------------------------------
+-spec get_resource(resource_type()) -> {ok, resource()} | {error, no_resources}.
+get_resource(Type) when is_atom(Type) ->
+    rd_core:round_robin_get(Type). 
 
 %%------------------------------------------------------------------------------
 %% @doc Returns ALL cached resources for a particular type.
 %% @end
 %%------------------------------------------------------------------------------
--spec get_all_resources(resource_type()) -> [resource()].
-get_all_resources(Type) ->
-    gen_server:call(?RD, {get_all_resources, Type}). 
+-spec get_resources(resource_type()) -> [resource()].
+get_resources(Type) ->
+    rd_store:get_resources(Type).
 
 %%------------------------------------------------------------------------------
 %% @doc Removes a cached resource from the resource pool. Only returns after the
 %%      resource has been deleted.
 %% @end
 %%------------------------------------------------------------------------------
--spec delete_resource(resource_type(), resource()) -> ok.
-delete_resource(Type, Instance) ->
-    delete_resource({Type, Instance}).
-
-%% @equiv delete_resource(resource_type(), resource())
--spec delete_resource(resource_tuple()) -> ok.
-delete_resource(ResourceTuple = {_,_}) ->
-    gen_server:call(?RD, {delete_resource, ResourceTuple}).
+-spec delete_resource_tuple(resource_tuple()) -> ok.
+delete_resource_tuple(ResourceTuple = {_,_}) ->
+    rd_store:delete_resource_tuple(ResourceTuple).
 
 %%------------------------------------------------------------------------------
 %% @doc Counts the cached instances of a particular resource type.
@@ -176,7 +184,7 @@ get_num_resource(Type) ->
 %%------------------------------------------------------------------------------
 -spec delete_target_resource_type(resource_type()) -> true.
 delete_target_resource_type(Type) ->
-    rd_store:delete_target_resource_type(Type).
+    rd_core:delete_target_resource_type(Type).
 
 %%------------------------------------------------------------------------------
 %% @doc Remove a local resource. The resource will no longer be available for
@@ -185,7 +193,7 @@ delete_target_resource_type(Type) ->
 %%------------------------------------------------------------------------------
 -spec delete_local_resource_tuple(resource_tuple()) -> no_return().
 delete_local_resource_tuple(LocalResourceTuple) ->
-    rd_store:delete_local_resource_tuple(LocalResourceTuple).
+    rd_core:delete_local_resource_tuple(LocalResourceTuple).
 
 %%------------------------------------------------------------------------------
 %% @doc Gets a list of the types that have resources that have been cached.
@@ -238,20 +246,27 @@ contact_nodes() ->
     contact_nodes(10000).
 
 ping_contact_nodes([], _Timeout) ->
-    ?INFO_MSG("No contact node specified. Potentially running in a standalone node~n", []),
+    error_logger:info_msg("No contact node specified. Potentially running in a standalone node~n", []),
     {error, no_contact_node};
 ping_contact_nodes(Nodes, Timeout) ->
-    fs_lists:do_until(fun(Node) ->
-			      case fs_net:sync_ping(Node, Timeout) of
-				  pong ->
-				      ok;
-				  pang ->
-				      ?INFO_MSG("ping contact node at ~p failed~n", [Node]), 
-				      {error, bad_contact_node}
-			      end
-		      end,
-		      ok,
-		      Nodes).
+    Reply = do_until(fun(Node) ->
+			     case sync_ping(Node, Timeout) of
+				 pong ->
+				     true;
+				 pang ->
+				     error_logger:info_msg("ping contact node at ~p failed~n", [Node]), 
+				     false
+			     end
+		     end,
+		     Nodes),
+
+    case Reply of
+	false ->
+	    {error, bad_contact_node};
+	true ->
+	    ok
+    end.
+	    
 
 %%------------------------------------------------------------------------------
 %% @doc Get the contact node for the application.
@@ -282,7 +297,7 @@ rpc_call(Type, Module, Function, Args) ->
 	    case rpc:call(Resource, Module, Function, Args) of
 		{badrpc, Reason} ->
 		    io:format("got a badrpc ~p~n", [Reason]),
-		    delete_resource(Type, Resource),
+		    delete_resource_tuple({Type, Resource}),
 		    rpc_call(Type, Module, Function, Args);
 		Reply ->
 		    io:format("result of rpc was ~p~n", [Reply]),
@@ -293,3 +308,67 @@ rpc_call(Type, Module, Function, Args) ->
     end.
 
 
+%%----------------------------------------------------------------------------
+%% @private
+%% @doc Applies a fun to all elements of a list until getting a non false
+%%      return value from the passed in fun.
+%% @end
+%%----------------------------------------------------------------------------
+-spec do_until(term(), list()) -> term() | false.
+do_until(_F, []) ->
+    false;
+do_until(F, [Last]) ->
+    F(Last);
+do_until(F, [H|T]) ->
+    case F(H) of
+	false  -> do_until(F, T);
+	Return -> Return
+    end.
+    
+%%--------------------------------------------------------------------
+%% @private
+%% @doc Pings a node and returns only after the net kernal distributes the nodes.
+%% This function will return pang after 10 seconds if the Node is not found in nodes()
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec sync_ping(node(), timeout()) -> pang | pong.
+sync_ping(Node, Timeout) ->
+    case net_adm:ping(Node) of
+        pong ->
+            case poll_until(fun() -> lists:member(Node, nodes(known)) end, 500, Timeout / 500) of
+                true  -> pong;
+                false -> pang
+            end;
+        pang ->
+            pang
+    end.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc This is a higher order function that allows for Iterations
+%%      number of executions of Fun until false is not returned 
+%%      from the Fun pausing for PauseMS after each execution.
+%% <pre>
+%% Variables:
+%%  Fun - A fun to execute per iteration.
+%%  Iterations - The maximum number of iterations to try getting Reply out of Fun.  
+%%  PauseMS - The number of miliseconds to wait inbetween each iteration.
+%%  Return - What ever the fun returns.
+%% </pre>
+%% @end
+%%--------------------------------------------------------------------
+-spec poll_until(term(), timeout(), timeout()) -> term() | false.
+poll_until(Fun, 0, _PauseMS) ->
+    Fun();
+poll_until(Fun, Iterations, PauseMS) ->
+    case Fun() of
+        false -> 
+            timer:sleep(PauseMS),
+            case Iterations of 
+                infinity   -> poll_until(Fun, Iterations, PauseMS);
+                Iterations -> poll_until(Fun, Iterations - 1, PauseMS)
+            end;
+        Reply -> 
+            Reply
+    end.

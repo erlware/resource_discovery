@@ -25,8 +25,6 @@
    [
     kernel, 
     stdlib,
-    sasl,
-    fslib,
     gas
    ]},
 

@@ -62,10 +62,6 @@ init([]) ->
 
     SupFlags = {RestartStrategy, MaxRestarts, MaxTimeBetRestarts},
 
-    % Create the storage for the local parameters; i.e. LocalTypes 
-    % and TargetTypes.
-    rd_store:new_LPS(),
-
     ChildSpecs = 
         [ 
           {rd_core,

@@ -18,8 +18,6 @@
 
 -record(state, {frequency}).
 
--include("macros.hrl").
-
 %%====================================================================
 %% External functions
 %%====================================================================
@@ -56,7 +54,7 @@ start_link() ->
 %%          {stop, Reason}
 %%--------------------------------------------------------------------
 init([Frequency]) ->
-    ?INFO_MSG("~n", []),
+    error_logger:info_msg("~n", []),
     ok = resource_discovery:contact_nodes(),
     {ok, #state{frequency = Frequency}, Frequency}.
 
@@ -103,7 +101,7 @@ handle_info(timeout, State = #state{frequency = Frequency}) ->
 %% Returns: any (ignored by gen_server)
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
-    ?INFO_MSG("~n", []),
+    error_logger:info_msg("~n", []),
     ok.
 
 %%--------------------------------------------------------------------

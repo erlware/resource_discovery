@@ -136,7 +136,6 @@ add_callback_module(Module) when is_atom(Module) ->
 %% @doc Replies with the cached resource at the index specified. If for example we had
 %%      a list of resources that looked like {R1, R2, R3} and index 2 was
 %%      requested the user would receive R2.
-%% @spec (resource_type(), Index::integer()) -> {ok, resource()} | {error, no_resources}
 %% @end
 %%------------------------------------------------------------------------------
 -spec get_resource(resource_type(), pos_integer()) -> {ok, resource()} | {error, no_resources}.
@@ -146,7 +145,6 @@ get_resource(Type, Index) ->
 %%------------------------------------------------------------------------------
 %% @doc Replies with the cached resource. Round robins though the resources
 %%      cached.
-%% @spec (resource_type(), Index::integer()) -> {ok, resource()} | {error, no_resources}
 %% @end
 %%------------------------------------------------------------------------------
 -spec get_resource(resource_type()) -> {ok, resource()} | {error, no_resources}.
@@ -286,7 +284,6 @@ get_contact_nodes() ->
 %% Varibles:
 %%  Type - The resource type to get from resource discovery.
 %% </pre>
-%% @spec (Type, Module, Function, Args) -> RPCResult | {error, no_resources}
 %% @end
 %%------------------------------------------------------------------------------
 -spec rpc_call(resource_type(), atom(), atom(), [term()]) -> term() | {error, no_resources}.

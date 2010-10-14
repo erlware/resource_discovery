@@ -38,7 +38,6 @@
 % Get
 -export([
          get_resource/1, 
-         get_resource/2, 
          get_resources/1, 
          get_num_resource/1, 
          get_resource_types/0,
@@ -56,6 +55,8 @@
 % Other
 -export([
          trade_resources/0,
+         sync_resources/1,
+         sync_resources/0,
          contact_nodes/0,
          rpc_call/4
         ]).
@@ -91,6 +92,38 @@ start(_Type, StartArgs) ->
 -spec trade_resources() -> ok.
 trade_resources() ->
     rd_core:trade_resources().
+
+%%-----------------------------------------------------------------------
+%% @doc Syncronizes resources between the caller and the node supplied.
+%%      Like trade resources but this call blocks.
+%% @end
+%%-----------------------------------------------------------------------
+-spec sync_resources(timeout()) -> ok.
+sync_resources(Timeout) ->
+    Self = self(),
+    Pids = [spawn(fun() ->
+			  Self ! {'$sync_resources$', self(), (catch rd_core:sync_resources(Node))}
+		  end)
+	    || Node <- nodes(known)],
+    get_responses(Pids, Timeout).
+
+get_responses([], _Timeout) ->
+    ok;
+get_responses(Pids, Timeout) ->
+    %% XXX TODO fix the timeout by subracting elapsed time.
+    %% XXX TODO perhaps use the response.
+    receive
+	{'$sync_resources$', Pid, _Resp} ->
+	    NewPids = lists:delete(Pid, Pids),
+	    get_responses(NewPids, Timeout)
+    after
+	Timeout ->
+	    {error, timeout}
+    end.
+			  
+-spec sync_resources() -> ok.
+sync_resources() ->
+    sync_resources(10000).
 
 %%------------------------------------------------------------------------------
 %% @doc Adds to the list of target types. Target types are the types
@@ -131,16 +164,6 @@ add_callback_modules([H|_] = Modules) when is_atom(H) ->
 -spec add_callback_module(atom()) -> no_return().
 add_callback_module(Module) when is_atom(Module) ->
     add_callback_modules([Module]).
-
-%%------------------------------------------------------------------------------
-%% @doc Replies with the cached resource at the index specified. If for example we had
-%%      a list of resources that looked like {R1, R2, R3} and index 2 was
-%%      requested the user would receive R2.
-%% @end
-%%------------------------------------------------------------------------------
--spec get_resource(resource_type(), pos_integer()) -> {ok, resource()} | {error, no_resources}.
-get_resource(Type, Index) ->
-    rd_core:index_get(Type, Index). 
 
 %%------------------------------------------------------------------------------
 %% @doc Replies with the cached resource. Round robins though the resources

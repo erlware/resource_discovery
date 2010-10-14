@@ -12,12 +12,12 @@
 %% API
 -export([
 	 start_link/0,
+	 sync_resources/1,
 	 trade_resources/0
 	]).
 
 % Fetch
 -export([
-	 index_get/2,
 	 round_robin_get/1
 	]).
 
@@ -136,13 +136,17 @@ round_robin_get(Type) ->
     gen_server:call(?SERVER, {round_robin_get, Type}).
 
 %%-----------------------------------------------------------------------
-%% @doc Get a resource of a particular type at a given index. Index
-%%      starts at 1. 
+%% @doc Gets resource of a particular type outputs and places it in last position.
 %% @end
 %%-----------------------------------------------------------------------
--spec index_get(resource_type(), pos_integer()) -> {ok, resource()} | {error, not_found}.
-index_get(Type, Index) ->
-    gen_server:call(?SERVER, {index_get, {Type, Index}}).
+-spec sync_resources(node()) -> ok.
+sync_resources(Node) ->
+    LocalResourceTuples = rd_store:get_local_resource_tuples(),
+    TargetTypes = rd_store:get_target_types(),
+    {ok, FilteredRemotes} = gen_server:call({?SERVER, Node}, {sync_resources, {LocalResourceTuples, TargetTypes}}),
+    rd_store:store_resource_tuples(FilteredRemotes),
+    make_callbacks(FilteredRemotes),
+    ok.
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -152,11 +156,16 @@ init([]) ->
     error_logger:info_msg("~n", []),
     {ok, #state{}}.
 
+handle_call({sync_resources, {RemoteResourceTuples, RemoteTargetTypes}}, _From, State) ->
+    LocalResourceTuples = rd_store:get_local_resource_tuples(),
+    TargetTypes = rd_store:get_target_types(),
+    FilteredRemotes = filter_resource_tuples_by_types(TargetTypes, RemoteResourceTuples),
+    FilteredLocals = filter_resource_tuples_by_types(RemoteTargetTypes, LocalResourceTuples),
+    rd_store:store_resource_tuples(FilteredRemotes),
+    make_callbacks(FilteredRemotes),
+    {reply, {ok, FilteredLocals}, State};
 handle_call({round_robin_get, Type}, _From, State) ->
     Reply = rd_store:round_robin_get(Type),
-    {reply, Reply, State};
-handle_call({index_get, {Type, Index}}, _From, State) ->
-    Reply = rd_store:index_get(Type, Index),
     {reply, Reply, State};
 handle_call({store_callback_modules, Modules}, _From, State) ->
     rd_store:store_callback_modules(Modules),

@@ -24,7 +24,6 @@
 % Lookup
 -export([
          round_robin_get/1,
-         index_get/2,
          get_resources/1,
          get_callback_modules/0,
          get_local_resource_tuples/0,
@@ -207,20 +206,6 @@ store_resource_tuples([{_,_}|_] = ResourceTuples) ->
 delete_resource({Type, Resource}) ->
     ets:insert(?RS, {Type, lists:delete(Resource, get_resources(Type))}).
     
-%%-----------------------------------------------------------------------
-%% @doc Get a resource of a particular type at a given index. Index
-%%      starts at 1. 
-%% @end
-%%-----------------------------------------------------------------------
--spec index_get(resource_type(), pos_integer()) -> {ok, resource()} | {error, not_found}.
-index_get(Type, Index) ->
-    get_nth(Index, get_resources(Type)).
-
-get_nth(N, List) when length(List) >= N ->
-    {ok, lists:nth(N, List)};
-get_nth(_N, _List) ->
-    {error, not_found}.
-
 %%-----------------------------------------------------------------------
 %% @doc Gets resource of a particular type outputs and places it in last position.
 %% @end

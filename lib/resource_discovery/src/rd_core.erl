@@ -13,7 +13,9 @@
 -export([
 	 start_link/0,
 	 sync_resources/1,
-	 trade_resources/0
+	 trade_resources/0,
+	 filter_resource_tuples_by_types/2,
+	 make_callbacks/1
 	]).
 
 % Fetch
@@ -59,6 +61,38 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+%%--------------------------------------------------------------------
+%% @doc call each subscribed callback function for each new
+%%      resource supplied.
+%% @end
+%%--------------------------------------------------------------------
+-spec make_callbacks([resource_tuple()]) -> ok.
+make_callbacks(NewResources) ->
+    lists:foreach(
+      fun(Module) ->
+	      lists:foreach(fun(Resource) ->
+				    spawn(fun() -> Module:resource_up(Resource) end) end,
+			    NewResources)
+      end,
+      rd_store:get_callback_modules()).
+
+%%--------------------------------------------------------------------
+%% @doc return a list of resources that have a resource_type() found in the target
+%%      types list.
+%% @end
+%%--------------------------------------------------------------------
+-spec filter_resource_tuples_by_types([resource_type()], [resource_tuple()]) -> ok.
+filter_resource_tuples_by_types(TargetTypes, Resources) ->
+    Fun = 
+	fun({Type, _Instance} = Resource, Acc) ->
+		case lists:member(Type, TargetTypes) of
+		    true  -> [Resource|Acc];
+		    false -> Acc
+		end
+	end,
+    lists:foldl(Fun, [], Resources).
+
 
 %%-----------------------------------------------------------------------
 %% @doc Store the callback modules for the local system.
@@ -143,13 +177,9 @@ round_robin_get(Type) ->
 sync_resources(Node) ->
     LocalResourceTuples = rd_store:get_local_resource_tuples(),
     TargetTypes = rd_store:get_target_resource_types(),
-    FilteredLocals = filter_resource_tuples_by_types(TargetTypes, LocalResourceTuples),
-    error_logger:info_msg("local resource tuples are ~p and target types ~p~nThe filtered locals are ~p~n",
-			  [LocalResourceTuples, TargetTypes, FilteredLocals]),
     {ok, FilteredRemotes} = gen_server:call({?SERVER, Node}, {sync_resources, {LocalResourceTuples, TargetTypes}}),
-    AllResourceTuples = FilteredRemotes ++ FilteredLocals,
-    rd_store:store_resource_tuples(AllResourceTuples),
-    make_callbacks(AllResourceTuples),
+    rd_store:store_resource_tuples(FilteredRemotes),
+    make_callbacks(FilteredRemotes),
     ok.
 
 %%%===================================================================
@@ -228,30 +258,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-%% @private
-%% @doc return a list of resources that have a resource_type() found in the target
-%%      types list.
-%% @end
-filter_resource_tuples_by_types(TargetTypes, Resources) ->
-    Fun = 
-	fun({Type, _Instance} = Resource, Acc) ->
-		case lists:member(Type, TargetTypes) of
-		    true  -> [Resource|Acc];
-		    false -> Acc
-		end
-	end,
-    lists:foldl(Fun, [], Resources).
-
-%% @private
-%% @doc call each callback function for each new resource in its own process.
-make_callbacks(NewResources) ->
-    lists:foreach(
-      fun(Module) ->
-	      lists:foreach(fun(Resource) ->
-				    spawn(fun() -> Module:resource_up(Resource) end) end,
-			    NewResources)
-      end,
-      rd_store:get_callback_modules()).
 
 reply(noreply, _LocalResources) ->
     ok;

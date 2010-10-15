@@ -58,6 +58,9 @@
          sync_resources/1,
          sync_resources/0,
          contact_nodes/0,
+         rpc_multicall/5,
+         rpc_multicall/4,
+         rpc_call/5,
          rpc_call/4
         ]).
 
@@ -100,6 +103,7 @@ trade_resources() ->
 %%-----------------------------------------------------------------------
 -spec sync_resources(timeout()) -> ok.
 sync_resources(Timeout) ->
+    sync_locals(),
     Self = self(),
     Nodes = nodes(),
     error_logger:info_msg("syncing resources to nodes ~p~n", [Nodes]),
@@ -108,6 +112,13 @@ sync_resources(Timeout) ->
 		  end)
 	    || Node <- Nodes],
     get_responses(Pids, Timeout).
+
+sync_locals() ->
+    LocalResourceTuples = rd_store:get_local_resource_tuples(),
+    TargetTypes = rd_store:get_target_resource_types(),
+    FilteredLocals = rd_core:filter_resource_tuples_by_types(TargetTypes, LocalResourceTuples),
+    rd_store:store_resource_tuples(FilteredLocals),
+    rd_core:make_callbacks(FilteredLocals).
 
 get_responses([], _Timeout) ->
     ok;
@@ -311,24 +322,51 @@ get_contact_nodes() ->
 %% </pre>
 %% @end
 %%------------------------------------------------------------------------------
--spec rpc_call(resource_type(), atom(), atom(), [term()]) -> term() | {error, no_resources}.
-rpc_call(Type, Module, Function, Args) ->
+-spec rpc_call(resource_type(), atom(), atom(), [term()], timeout()) -> term() | {error, no_resources}.
+rpc_call(Type, Module, Function, Args, Timeout) ->
     case get_resource(Type) of
 	{ok, Resource} -> 
-	    io:format("got a resource ~p~n", [Resource]),
-	    case rpc:call(Resource, Module, Function, Args) of
+	    error_logger:info_msg("got a resource ~p~n", [Resource]),
+	    case rpc:call(Resource, Module, Function, Args, Timeout) of
 		{badrpc, Reason} ->
-		    io:format("got a badrpc ~p~n", [Reason]),
+		    error_logger:info_msg("got a badrpc ~p~n", [Reason]),
 		    delete_resource_tuple({Type, Resource}),
-		    rpc_call(Type, Module, Function, Args);
+		    rpc_call(Type, Module, Function, Args, Timeout);
 		Reply ->
-		    io:format("result of rpc was ~p~n", [Reply]),
+		    error_logger:info_msg("result of rpc was ~p~n", [Reply]),
 		    Reply
 	    end;
         {error, no_resources} -> 
 	    {error, no_resources}
     end.
 
+-spec rpc_call(resource_type(), atom(), atom(), [term()]) -> term() | {error, no_resources}.
+rpc_call(Type, Module, Function, Args) ->
+    rpc_call(Type, Module, Function, Args, 60000).
+
+%%------------------------------------------------------------------------------
+%% @doc Execute an rpc on a cached resource.  Any bad nodes are deleted. 
+%%      resource is deleted and the next resource is tried, else the result is 
+%%      returned to the user.
+%% @end
+%%------------------------------------------------------------------------------
+-spec rpc_multicall(resource_type(), atom(), atom(), [term()], timeout()) ->
+    {term(), [node()]} | {error, no_resources}.
+rpc_multicall(Type, Module, Function, Args, Timeout) ->
+    case get_resources(Type) of
+        [] -> 
+	    {error, no_resources};
+	Resources -> 
+	    error_logger:info_msg("got resources ~p~n", [Resources]),
+	    {Resl, BadNodes} = rpc:multicall(Resources, Module, Function, Args, Timeout),
+	    [delete_resource_tuple({Type, BadNode}) || BadNode <- BadNodes],
+	    {Resl, BadNodes}
+    end.
+
+-spec rpc_multicall(resource_type(), atom(), atom(), [term()]) -> 
+    {term(), [node()]} | {error, no_resources}.
+rpc_multicall(Type, Module, Function, Args) ->
+    rpc_multicall(Type, Module, Function, Args, 60000).
 
 %%----------------------------------------------------------------------------
 %% @private

@@ -79,7 +79,8 @@ new() ->
 -spec store_callback_modules([atom()]) -> no_return().
 store_callback_modules([H|_] = Modules) when is_atom(H) ->
     ets:insert(?LKVStore, {callback_modules,
-			   lists:concat([get_callback_modules(), Modules])}).
+			   lists:concat([delete_each(Modules, get_callback_modules()), Modules])}).
+
      
 %%-----------------------------------------------------------------------
 %% @doc Output the callback modules.
@@ -100,7 +101,7 @@ get_callback_modules() ->
 %%-----------------------------------------------------------------------
 -spec delete_callback_module(atom()) -> true.
 delete_callback_module(CallBackModule) ->
-    NewCallBackModules = delete_all(CallBackModule, get_callback_modules()),
+    NewCallBackModules = lists:delete(CallBackModule, get_callback_modules()),
     ets:insert(?LKVStore, {callback_modules, NewCallBackModules}).
 
 %%-----------------------------------------------------------------------
@@ -111,7 +112,7 @@ delete_callback_module(CallBackModule) ->
 -spec store_target_resource_types([atom()]) -> no_return().
 store_target_resource_types([H|_] = TargetTypes) when is_atom(H) ->
     ets:insert(?LKVStore, {target_types,
-			   lists:concat([get_target_resource_types(), TargetTypes])}).
+			   lists:concat([delete_each(TargetTypes, get_target_resource_types()), TargetTypes])}).
      
 %%-----------------------------------------------------------------------
 %% @doc Output the target types. These are the resource types we wish
@@ -133,7 +134,7 @@ get_target_resource_types() ->
 %%-----------------------------------------------------------------------
 -spec delete_target_type(atom()) -> true.
 delete_target_type(TargetType) ->
-    ets:insert(?LKVStore, {target_types, delete_all(TargetType, get_target_resource_types())}).
+    ets:insert(?LKVStore, {target_types, lists:delete(TargetType, get_target_resource_types())}).
 	    
 %%-----------------------------------------------------------------------
 %% @doc Store the "I haves" or local_resources for resource discovery.
@@ -142,7 +143,7 @@ delete_target_type(TargetType) ->
 -spec store_local_resource_tuples([resource_tuple()]) -> ok.
 store_local_resource_tuples([{_,_}|_] = LocalResourceTuples) ->
     ets:insert(?LKVStore, {local_resources,
-			   lists:concat([get_local_resource_tuples(), LocalResourceTuples])}).
+			   lists:concat([delete_each(LocalResourceTuples, get_local_resource_tuples()), LocalResourceTuples])}).
      
 %%-----------------------------------------------------------------------
 %% @doc Output the local resources.
@@ -163,7 +164,7 @@ get_local_resource_tuples() ->
 %%-----------------------------------------------------------------------
 -spec delete_local_resource(resource_tuple()) -> true.
 delete_local_resource(LocalResource) ->
-    ets:insert(?LKVStore, {local_resources, delete_all(LocalResource, get_local_resource_tuples())}).
+    ets:insert(?LKVStore, {local_resources, lists:delete(LocalResource, get_local_resource_tuples())}).
 
 %%%---------------------------
 %%% Network Resource Storage
@@ -188,7 +189,7 @@ get_resources(Type) ->
 %%-----------------------------------------------------------------------
 -spec store_resource_tuple(resource_tuple()) -> no_return().
 store_resource_tuple({Type, Resource}) when is_atom(Type) ->
-    ets:insert(?RS, {Type, [Resource|get_resources(Type)]}).
+    ets:insert(?RS, {Type, [Resource|lists:delete(Resource, get_resources(Type))]}).
 
 -spec store_resource_tuples([resource_tuple()]) -> no_return().
 store_resource_tuples([]) ->
@@ -204,7 +205,7 @@ store_resource_tuples([{_,_}|_] = ResourceTuples) ->
 %%-----------------------------------------------------------------------
 -spec delete_resource_tuple(resource_tuple()) -> no_return().
 delete_resource_tuple({Type, Resource}) ->
-    ets:insert(?RS, {Type, delete_all(Resource, get_resources(Type))}).
+    ets:insert(?RS, {Type, lists:delete(Resource, get_resources(Type))}).
     
 %%-----------------------------------------------------------------------
 %% @doc Gets resource of a particular type outputs and places it in last position.
@@ -234,23 +235,14 @@ get_num_resource_types() ->
 get_resource_types() ->
     [E || [E] <- ets:match(?RS, {'$1', '_'})].
 
-%% Delete all matching elements from a list
-delete_all(Term, [Term|T]) ->
-    delete_all(Term, T);
-delete_all(Term, [H|T]) ->
-    [H|delete_all(Term, T)];
-delete_all(_Term, []) ->
-    [].
+delete_each(Delete, From) ->
+    lists:foldl(fun(E, Acc) ->
+			  lists:delete(E, Acc)
+		  end, From, Delete).
 
 %%%=====================================================================
 %%% Testing functions
 %%%=====================================================================
-delete_all_test() ->
-    ?assertMatch([], delete_all(c, [])),
-    ?assertMatch([a], delete_all(c, [a])),
-    ?assertMatch([a, b], delete_all(c, [c, a, c, b, c])),
-    ?assertMatch([a, b], delete_all(c, [a, c, b, c])),
-    ?assertMatch([a, b], delete_all(c, [c, a, c, b])).
 
 get_callback_modules_test() ->
     new(),

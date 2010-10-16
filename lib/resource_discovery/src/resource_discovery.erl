@@ -2,7 +2,7 @@
 %%% File    : resource_discovery.erl
 %%% Author  : Martin J. Logan <martinjlogan@erlware.org>
 %%% @doc 
-%%%
+%%% Resource Discovery has 3 major types. They are listed here.
 %%% @type resource_tuple() = {resource_type(), resource()}. The type
 %%%       of a resource followed by the actual resource. Local
 %%%       resource tuples are communicated to other resource discovery
@@ -302,6 +302,7 @@ ping_contact_nodes(Nodes, Timeout) ->
     end.
 	    
 
+
 %%------------------------------------------------------------------------------
 %% @doc Get the contact node for the application.
 %% @spec get_contact_nodes() -> {ok, Value} | undefined
@@ -388,7 +389,6 @@ do_until(F, [H|T]) ->
 %%--------------------------------------------------------------------
 %% @private
 %% @doc Pings a node and returns only after the net kernal distributes the nodes.
-%% This function will return pang after 10 seconds if the Node is not found in nodes()
 %%
 %% @end
 %%--------------------------------------------------------------------
@@ -396,12 +396,23 @@ do_until(F, [H|T]) ->
 sync_ping(Node, Timeout) ->
     case net_adm:ping(Node) of
         pong ->
-            case poll_until(fun() -> lists:member(Node, nodes(known)) end, 500, Timeout / 500) of
+	    NumNodes = get_number_of_remote_nodes(Node),
+            case poll_until(fun() -> NumNodes == length(nodes(known)) end, 10, Timeout div 10) of
                 true  -> pong;
                 false -> pang
             end;
         pang ->
             pang
+    end.
+
+get_number_of_remote_nodes(Node) ->
+    try
+	Nodes = rpc:call(Node, erlang, nodes, [known]),
+	error_logger:info_msg("contact node has ~p~n", [Nodes]),
+	length(Nodes)
+    catch
+	_C:_E ->
+	    throw("failed to connect to contact node")
     end.
 
 %%--------------------------------------------------------------------

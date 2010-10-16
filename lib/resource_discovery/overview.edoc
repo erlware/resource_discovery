@@ -1,10 +1,8 @@
 @title The Resource Discovery Application
 @doc 
 
-<img src="http://www.martinjlogan.com/images/erlware-header.gif"/>
-
 <p>
-The Resource Discovery application allows you to set up smart Erlang clusters.  Producers and consumers within an Erlang cloud can find eachother with no pre configuration needed. For example lets say we have three services in an Erlang cloud of nodes:
+The Resource Discovery application allows you to set up smart Erlang clusters.  Producers and consumers within an Erlang cluster can find eachother with no pre-configuration needed. For example lets say we have three services in a cluster of nodes:
 </p>
 
 <ul>
@@ -14,33 +12,48 @@ The Resource Discovery application allows you to set up smart Erlang clusters.  
 </ul>
 
 <p>
-Each Video Display Agent needs to know about the System Logger. The Video Producer also needs to know about the System Logger and additionally each Video Producer needs to know about each Video Display Agent so that it can broadcast to each of them. Before understanding how all that is expressed in Resource Discovery we need to get some definitions out of the way.
+The Display Agent must of course be able to find a Video Producer and both the Video Producer and the Display Agent must know about the system logger. Before understanding how all that is expressed in Resource Discovery we need to get some definitions out of the way.
 </p>
 
 <h2>Definitions</h2>
 
 <p>
-A "Resource Type" is the name of a particular type of resource. For example all instances of Video Producer could each have the type "video_producer". Each Video Producer has the same type name but each instance of that resource is different and so has it's own "Resource Instance" identifier.  The "Resource Instance" of a "Resource Type" could be any Erlang term(), but is often times a node(), pid(), or registered name. In the case of our Video producer let's say it is an Erlang node name. Finally we have the "Resource" itself.  A "Resource" is a type containing both a "Resource Type" and a "Resource Instance", for example a Video Producer resource, of which there could be many, could look like {video_producer, vid@mynet.com}.
+Resource Discovery has 3 major types that you need to be concerned with. They are listed here.
+</p>
+<p>
+resource_tuple() = {resource_type(), resource()}. The type
+of a resource followed by the actual resource. Local
+resource tuples are communicated to other resource discovery
+instances.
+</p>
+<p>
+resource_type() = atom(). The name of a resource, how it is identified. For example
+a type of service that you have on the network may be identified by it's node name
+in which case you might have a resource type of 'my_service' of which there may be
+many node names representing resources such as {my_service, myservicenode@myhost}. 
+</p>
+<p>
+resource() =  term(). Either a concrete resource or a reference to one like a pid().
 </p>
 
 <h2>Expressing Relationships</h2>
 
 <p>
-Using these definitions we can describe the relationships that we have between our different types, the Video Display Agent, the Video Producer, and the System Logger. The above, Resources and Resource Types are grouped into three categories for describing resource relationships. 
+Using these definitions we can describe the relationships that we have between our different services; the Video Display Agent, the Video Producer, and the System Logger. It is helpful to break things down into three categories. These are as follows:
 </p>
 
 <ul>
- <li>Local Resources</li>
- <li>Target Types</li>
- <li>Cached Resources</li>
+ <li>Local Resources Tuples</li>
+ <li>Target Resource Types</li>
+ <li>Cached Resource Tuples</li>
 </ul>
 
 <p>
-Local Resources are those resources that a running Erlang node has to share with the network. A Video Display Agent node could make a call like what is below to express what it has to share with the network.
+Local Resources Tuples contain those resources that a running Erlang node has to share with the cluster. A Video Display Agent node could make a call like what is below to express what it has to share with the network.
 </p>
 
 ```
-resource_discovery:add_local_resources({video_producer, vid@mynet.com}).
+resource_discovery:add_local_resource_tuples({video_producer, node()}).
 '''
 
 <p>
@@ -48,25 +61,37 @@ A Video Producer node needs to know about the System Logger instance and about a
 </p>
 
 ```
-resource_discovery:add_target_types([video_producer, system_logger]).
+resource_discovery:add_target_resource_types([video_display, system_logger]).
 '''
 
-<h2>Finding and Using Resources</h2>
+<p>
+This indicates that the Video Producer service wants to find out about all services in the cluster of resource types video_display and system_logger.
+</p>
 
 <p>
-Now we are set up for our systems to obtain "Cached Resources". Cached Resources are those that have been discovered and are ready to be used. When each of the nodes comes up onto the network they will make the following call:
+Now we are set up for our system to obtain resource tuples from other nodes in the cluster and cache them locally. Cached Resource Tuples are those that have been discovered and are ready to be used. When each of the nodes comes up onto the network they will make one of the following calls:
 </p>
 
 ```
-resource_discovery:inform_network().
+resource_discovery:trade_resources().
+'''
+or
+```
+resource_discovery:sync_resources().
 '''
 
 <p>
-This will communicate with all other nodes in the current network.  When this function returns all Resources on the network that match the local nodes Target Types will be cached locally. Furthermore the local nodes Local Resources will be presented to all other nodes on the network to give them an opportunity to cache them if they match their respective Target Types. This call will timeout in approximately 10 seconds by default. If you desire a non blocking async call to inform the network use ``async_inform_network'' instead.
+This will communicate with all other nodes in the current network.  When this function returns all Resource Tuples on the network that match the calling nodes Target Resource Types will be cached locally. Furthermore the local nodes Local Resource Tuples will be cached on all remote nodes that have specified their resource types as target resource types. trade_resources/0 accomplishes this asyncronously where as sync_resources is a blocking call which typically accomplishes a full sync before returning. After either of these calls have been made you can go about using the resources you have discovered.
 </p>
 
 <p>
-The Cached Resources are now ready to be used. There is one question that this may raise though, which is when other nodes come online and present resources how will we know it locally. Well, if you want immediate notification of new Cached Resources you can subscribe to notifications by using:
+To use a resource from the resource cache Resource Discovery provides a number of useful functions. The most common of these is ``get_resource/1''. This will loop through resources in round robin fashion supplying a different resource each time it is called. There are also the rpc functions that act upon node based resources; these are rpc_call and rpc_multicall. There are other functions available for more control over the specific resources of a particular type you get. There are also functions provided for removing resources that have been found to be malfunctioning or simply not around anymore.  This is up to the user of resource discovery to do at the application level. 
+</p>
+
+<h2>Getting Notifications about New Resources</h2>
+
+<p>
+Sometimes when resources become available in the cluster it is desirable for an application to be notified of their presence. If you want immediate notification of new Cached Resources you can subscribe to notifications by using:
 </p>
 
 ```
@@ -84,14 +109,10 @@ resource_up(_DontCare) ->
     ok.
 '''
 
-<p>
-Finally to use a resource from the resource cache Resource Discovery provides a number of useful functions. The most common of these is ``get_resource/1''. This will loop through resources in round robin fashion supplying a different resource each time it is called. There are other functions available for more control over the specific resources of a particular type you get. There are also functions provided for removing resources that have been found to be malfunctioning or simply not around anymore.  This is up to the user of resource discovery to do at the application level. 
-</p>
-
 <h2>Getting into an Erlang Cloud</h2>
 
 <p>
-Getting into an Erlang node cloud is required as a minimal bootstrap for Resource Discovery.  To accomplish initial contact by pinging remote nodes already in the desired cloud something similar to the following entries should be in your Erlang config file. If you already have a resource discovery entry in your config file there is no need to add a new one, you should in that case just add the contact_nodes entry into the already existant resource_discovery section of the config.
+Getting into an Erlang node cluster is required as a minimal bootstrap for Resource Discovery.  To accomplish initial contact by pinging remote nodes already in the desired cloud the following entries should be in your Erlang config file. 
 </p>
 
 ```
@@ -107,7 +128,7 @@ These entries instruct resource discovery to ping node1 and node2 in order to jo
 </p>
 
 ```
--contact_node node3@mynet.com
+erl ... -contact_node node3@mynet.com
 '''
 
 <p>
@@ -117,7 +138,7 @@ The above flag set at startup would instruct Resource Discovery to ping node3 in
 <h2>Overcomming network and resource failures with heartbeating</h2>
 
 <p>
-At times resources fail and are perhaps taken out of the store of Cached Resources. At other times networks may fail and clouds become separated. One way of overcomming all of this is to setup heartbeats from Resource Discovery. Resource discovery can be configured to heartbeat at a specified interval. This means that it will both re-ping the configured contact nodes and will run an async_inform_network at the specified interval. To enable this place configuration similar to what is below in you Erlang config file. If you already have a resource discovery entry in your config file there is no need to add a new one, you should in that case just add the heartbeat_frequency entry into the already existant resource_discovery section of the config.
+At times resources fail and are perhaps taken out of the store of Cached Resource Tuples by an application when it discovers the resource is no longer around. At other times networks may fail and clusters become separated. One way of overcomming all of this is to setup heartbeats from Resource Discovery. Resource discovery can be configured to heartbeat at a specified interval. This means that it will both re-ping the configured contact nodes and will run a trade_resources/0 at the specified interval. To enable this place configuration similar to what is below in you Erlang config file.
 </p>
 
 ```
@@ -137,4 +158,4 @@ Enjoy! Send questions of comments to erlware-questions@erlware.org or erlware-de
 </p>
 
 @author Martin Logan <martinjlogan@erlware.org>
-@copyright 2008 Erlware
+@copyright 2010 Erlware

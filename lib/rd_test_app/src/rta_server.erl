@@ -36,7 +36,8 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %%--------------------------------------------------------------------
-%% @spec Return the pid for the server.
+%% @doc Return the pid for the server.
+%% @end
 %%--------------------------------------------------------------------
 get_pid() ->
     gen_server:call(?SERVER, get_pid).

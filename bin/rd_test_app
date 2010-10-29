@@ -7,8 +7,8 @@ export ROOTDIR=$(dirname $PROG_DIR)
 
 #### Fill in values for these variables ####
 REL_NAME=resource_discovery
-REL_VSN=0.1.0.0
-ERTS_VSN=5.8
+REL_VSN=0.1.1.0
+ERTS_VSN=5.8.1
 INVOCATION_SUFFIX="-prefix $ROOTDIR"
 ###########################################
 

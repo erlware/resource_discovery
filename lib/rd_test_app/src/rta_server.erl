@@ -61,14 +61,11 @@ init([]) ->
     resource_discovery:add_target_resource_types([pid, node]),
     resource_discovery:add_local_resource_tuples([{pid, self()}, {node, node()}]),
     TT = rd_store:get_target_resource_types(),
-    error_logger:info_msg("Target types should be [pid, node] we get ~p~n", [TT]),
+    io:format("Target types should be [pid, node] we get ~p~n", [TT]),
     resource_discovery:sync_resources(),
-    io:format("here~n"),
     R = resource_discovery:get_resources(pid),
     R2 = resource_discovery:get_resources(node),
-    error_logger:info_msg("should get pid and node resource for ~p and ~p" ++
-			  "~nand the remote node and process. we get ~p ~p~n",
-			  [self(), node(), R, R2]),
+    io:format("Expect ~p ~p~nGot ~p ~p~n", [self(), node(), R, R2]),
     {ok, #state{}, 0}.
 
 %%--------------------------------------------------------------------
@@ -120,13 +117,12 @@ handle_info(timeout, State) ->
     {noreply, State};
 handle_info({ok, Pid}, State) ->
     Pids = resource_discovery:get_resources(pid),
-    error_logger:info_msg("call resp ~p and local pid resources ~p~n",
-			  [Pid, Pids]),
+    io:format("call resp ~p and local pid resources ~p~n", [Pid, Pids]),
     {noreply, State};
 handle_info({Resp, BadNodes}, State) ->
     Pids = resource_discovery:get_resources(pid),
-    error_logger:info_msg("Multicall resp ~p and local pid resources ~p~n~p~n",
-			  [Resp, Pids, BadNodes]),
+    io:format("Multicall resp ~p and local pid resources ~p~n~p~n",
+	      [Resp, Pids, BadNodes]),
     {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.

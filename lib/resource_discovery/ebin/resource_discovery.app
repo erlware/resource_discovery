@@ -5,7 +5,7 @@
   {description, "Resource discovery & management"},
 
   % The version of the applicaton
-  {vsn, "0.2.0.0"},
+  {vsn, "0.2.1.0"},
 
   % All modules used by the application.
   {modules,
@@ -14,6 +14,7 @@
 	rd_core,
 	rd_heartbeat,
 	rd_store,
+	rd_util,
 	rd_sup
    ]},
 
@@ -24,8 +25,7 @@
   {applications,
    [
     kernel, 
-    stdlib,
-    gas
+    stdlib
    ]},
 
   % configuration parameters

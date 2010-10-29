@@ -28,17 +28,16 @@
 %% Expects:
 %%  Frequency - The frequency of heartbeats in milliseconds.
 %% </pre>
-%% @spec start_link(Frequency) -> {ok, Pid}
 %% @end
 %%--------------------------------------------------------------------
+-spec start_link(non_neg_integer()) -> {ok, pid()}.
 start_link(Frequency) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Frequency], []).
 
-%% @spec start_link() -> {ok, Pid}
 %% @equiv start_link(0) 
 start_link() ->
     %% The default value is 0 which indicates no heartbeating. 
-    {ok, Frequency} = gas:get_env(resource_discovery, heartbeat_frequency, 0),
+    Frequency = rd_util:get_env(heartbeat_frequency, 0),
     start_link(Frequency).
 
 %%====================================================================
@@ -93,7 +92,8 @@ handle_info(timeout, State = #state{frequency = 0}) ->
 handle_info(timeout, State = #state{frequency = Frequency}) ->
     resource_discovery:contact_nodes(),
     resource_discovery:trade_resources(),
-    {noreply, State, Frequency}.
+    %% Wait for approximately the frequency with a random factor.
+    {noreply, State, random:uniform(Frequency div 2) + (Frequency div 2) + Frequency div 3}.
 
 %%--------------------------------------------------------------------
 %% Function: terminate/2

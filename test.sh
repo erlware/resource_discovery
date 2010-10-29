@@ -1,11 +1,8 @@
 #!/bin/sh
 
-if [ $1 == "" ];then
-	"Enter in the suffix for a node with an sname like <nodename><suffix> as in a@macintosh"
-	exit 1
-fi
+SUFFIX=`erl -sname a -s init stop | grep @ | sed -e 's/[^@]*\([^)]*\).*/\1/'`
 
-xterm -hold -e rd_test_app -sname a -contact_node a"$1" &
+xterm -hold -e rd_test_app -sname a -contact_node a$SUFFIX &
 sleep 5
-xterm -hold -e rd_test_app -sname b -contact_node a"$1" &
-xterm -hold -e rd_test_app -sname c -contact_node a"$1" &
+xterm -hold -e rd_test_app -sname b -contact_node a$SUFFIX &
+xterm -hold -e rd_test_app -sname c -contact_node a$SUFFIX &

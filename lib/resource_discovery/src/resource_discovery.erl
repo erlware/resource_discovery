@@ -83,6 +83,7 @@
 start(_Type, StartArgs) ->
     % Create the storage for the local parameters; i.e. LocalTypes 
     % and TargetTypes.
+    random:seed(now()),
     rd_store:new(),
     rd_sup:start_link(StartArgs).
 
@@ -267,10 +268,10 @@ contact_nodes(Timeout) ->
     {ok, ContactNodes} =
 	case lists:keysearch(contact_node, 1, init:get_arguments()) of
 	    {value, {contact_node, [I_ContactNode]}} ->
-		gas:set_env(resource_discovery, contact_nodes, [I_ContactNode]),
+		application:set_env(resource_discovery, contact_nodes, [I_ContactNode]),
 		{ok, [list_to_atom(I_ContactNode)]};
 	    _ ->
-		gas:get_env(resource_discovery, contact_nodes, [])
+		rd_util:get_env(contact_nodes, [])
 	end,
     ping_contact_nodes(ContactNodes, Timeout).
 
@@ -283,8 +284,8 @@ ping_contact_nodes([], _Timeout) ->
     error_logger:info_msg("No contact node specified. Potentially running in a standalone node~n", []),
     {error, no_contact_node};
 ping_contact_nodes(Nodes, Timeout) ->
-    Reply = do_until(fun(Node) ->
-			     case sync_ping(Node, Timeout) of
+    Reply = rd_util:do_until(fun(Node) ->
+			     case rd_util:sync_ping(Node, Timeout) of
 				 pong ->
 				     true;
 				 pang ->
@@ -311,7 +312,7 @@ ping_contact_nodes(Nodes, Timeout) ->
 %% @end
 %%------------------------------------------------------------------------------
 get_contact_nodes() ->
-    gas:get_env(resource_discovery, contact_nodes).
+    application:get_env(resource_discovery, contact_nodes).
     
 %%------------------------------------------------------------------------------
 %% @doc Execute an rpc on a cached resource.  If the result of the rpc is {badrpc, reason} the 
@@ -368,78 +369,3 @@ rpc_multicall(Type, Module, Function, Args, Timeout) ->
     {term(), [node()]} | {error, no_resources}.
 rpc_multicall(Type, Module, Function, Args) ->
     rpc_multicall(Type, Module, Function, Args, 60000).
-
-%%----------------------------------------------------------------------------
-%% @private
-%% @doc Applies a fun to all elements of a list until getting a non false
-%%      return value from the passed in fun.
-%% @end
-%%----------------------------------------------------------------------------
--spec do_until(term(), list()) -> term() | false.
-do_until(_F, []) ->
-    false;
-do_until(F, [Last]) ->
-    F(Last);
-do_until(F, [H|T]) ->
-    case F(H) of
-	false  -> do_until(F, T);
-	Return -> Return
-    end.
-    
-%%--------------------------------------------------------------------
-%% @private
-%% @doc Pings a node and returns only after the net kernal distributes the nodes.
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec sync_ping(node(), timeout()) -> pang | pong.
-sync_ping(Node, Timeout) ->
-    case net_adm:ping(Node) of
-        pong ->
-	    NumNodes = get_number_of_remote_nodes(Node),
-            case poll_until(fun() -> NumNodes == length(nodes(known)) end, 10, Timeout div 10) of
-                true  -> pong;
-                false -> pang
-            end;
-        pang ->
-            pang
-    end.
-
-get_number_of_remote_nodes(Node) ->
-    try
-	Nodes = rpc:call(Node, erlang, nodes, [known]),
-	error_logger:info_msg("contact node has ~p~n", [Nodes]),
-	length(Nodes)
-    catch
-	_C:_E ->
-	    throw("failed to connect to contact node")
-    end.
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc This is a higher order function that allows for Iterations
-%%      number of executions of Fun until false is not returned 
-%%      from the Fun pausing for PauseMS after each execution.
-%% <pre>
-%% Variables:
-%%  Fun - A fun to execute per iteration.
-%%  Iterations - The maximum number of iterations to try getting Reply out of Fun.  
-%%  PauseMS - The number of miliseconds to wait inbetween each iteration.
-%%  Return - What ever the fun returns.
-%% </pre>
-%% @end
-%%--------------------------------------------------------------------
--spec poll_until(term(), timeout(), timeout()) -> term() | false.
-poll_until(Fun, 0, _PauseMS) ->
-    Fun();
-poll_until(Fun, Iterations, PauseMS) ->
-    case Fun() of
-        false -> 
-            timer:sleep(PauseMS),
-            case Iterations of 
-                infinity   -> poll_until(Fun, Iterations, PauseMS);
-                Iterations -> poll_until(Fun, Iterations - 1, PauseMS)
-            end;
-        Reply -> 
-            Reply
-    end.

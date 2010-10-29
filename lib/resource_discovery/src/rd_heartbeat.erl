@@ -53,7 +53,6 @@ start_link() ->
 %%          {stop, Reason}
 %%--------------------------------------------------------------------
 init([Frequency]) ->
-    error_logger:info_msg("~n", []),
     ok = resource_discovery:contact_nodes(),
     {ok, #state{frequency = Frequency}, Frequency}.
 

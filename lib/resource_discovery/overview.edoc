@@ -156,7 +156,7 @@ At times resources fail and are perhaps taken out of the store of Cached Resourc
 '''
 
 <p>
-An entry like that above tells Resource Discovery to ping every 60000 milliseconds, or one minute. An entry of 0 disables heartbeating all together and is the default if not configured.
+An entry like that above tells Resource Discovery to ping about every 60000 milliseconds plus or minus a randomization factor. An entry of 0 disables heartbeating all together and is the default if not configured.
 </p>
 
 <p>

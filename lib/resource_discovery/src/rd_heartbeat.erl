@@ -37,7 +37,7 @@ start_link(Frequency) ->
 %% @equiv start_link(0) 
 start_link() ->
     %% The default value is 0 which indicates no heartbeating. 
-    Frequency = rd_util:get_env(heartbeat_frequency, 0),
+    Frequency = rd_util:get_env(heartbeat_frequency, 60000),
     start_link(Frequency).
 
 %%====================================================================

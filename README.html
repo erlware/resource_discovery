@@ -1,5 +1,16 @@
-@title The Resource Discovery Application
-@doc 
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>The Resource Discovery Application</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<h1>The Resource Discovery Application</h1>
+<p>Copyright © 2010 Erlware
+</p>
+<p><b>Authors:</b> Martin Logan (<a href="mailto:martinjlogan@erlware.org"><tt>martinjlogan@erlware.org</tt></a>).</p>
+
 
 <p>
 The Resource Discovery application allows you to set up smart Erlang clusters.  Producers and consumers within an Erlang cluster can find eachother with no pre-configuration needed. For example lets say we have three services in a cluster of nodes:
@@ -52,17 +63,13 @@ Using these definitions we can describe the relationships that we have between o
 Local Resources Tuples contain those resources that a running Erlang node has to share with the cluster. A Video Display Agent node could make a call like what is below to express what it has to share with the network.
 </p>
 
-```
-resource_discovery:add_local_resource_tuples({video_producer, node()}).
-'''
+<pre>resource_discovery:add_local_resource_tuples({video_producer, node()}).</pre>
 
 <p>
 A Video Producer node needs to know about the System Logger instance and about all instances of Video Display Agent nodes. To express this it could make a call like what is below to express this. 
 </p>
 
-```
-resource_discovery:add_target_resource_types([video_display, system_logger]).
-'''
+<pre>resource_discovery:add_target_resource_types([video_display, system_logger]).</pre>
 
 <p>
 This indicates that the Video Producer service wants to find out about all services in the cluster of resource types video_display and system_logger.
@@ -72,20 +79,16 @@ This indicates that the Video Producer service wants to find out about all servi
 Now we are set up for our system to obtain resource tuples from other nodes in the cluster and cache them locally. Cached Resource Tuples are those that have been discovered and are ready to be used. When each of the nodes comes up onto the network they will make one of the following calls:
 </p>
 
-```
-resource_discovery:trade_resources().
-'''
+<pre>resource_discovery:trade_resources().</pre>
 or
-```
-resource_discovery:sync_resources().
-'''
+<pre>resource_discovery:sync_resources().</pre>
 
 <p>
 This will communicate with all other nodes in the current network.  When this function returns all Resource Tuples on the network that match the calling nodes Target Resource Types will be cached locally. Furthermore the local nodes Local Resource Tuples will be cached on all remote nodes that have specified their resource types as target resource types. trade_resources/0 accomplishes this asyncronously where as sync_resources is a blocking call which typically accomplishes a full sync before returning. After either of these calls have been made you can go about using the resources you have discovered.
 </p>
 
 <p>
-To use a resource from the resource cache Resource Discovery provides a number of useful functions. The most common of these is ``get_resource/1''. This will loop through resources in round robin fashion supplying a different resource each time it is called. There are also the rpc functions that act upon node based resources; these are rpc_call and rpc_multicall. There are other functions available for more control over the specific resources of a particular type you get. There are also functions provided for removing resources that have been found to be malfunctioning or simply not around anymore.  This is up to the user of resource discovery to do at the application level. 
+To use a resource from the resource cache Resource Discovery provides a number of useful functions. The most common of these is <code>get_resource/1</code>. This will loop through resources in round robin fashion supplying a different resource each time it is called. There are also the rpc functions that act upon node based resources; these are rpc_call and rpc_multicall. There are other functions available for more control over the specific resources of a particular type you get. There are also functions provided for removing resources that have been found to be malfunctioning or simply not around anymore.  This is up to the user of resource discovery to do at the application level. 
 </p>
 
 <h2>Getting Notifications about New Resources</h2>
@@ -94,20 +97,16 @@ To use a resource from the resource cache Resource Discovery provides a number o
 Sometimes when resources become available in the cluster it is desirable for an application to be notified of their presence. If you want immediate notification of new Cached Resources you can subscribe to notifications by using:
 </p>
 
-```
-resource_discovery:add_callback_modules([video_send, log_send]).
-'''
+<pre>resource_discovery:add_callback_modules([video_send, log_send]).</pre>
 
 <p>
 The above call will ensure that the exported function "resource_up/1" will be called upon the caching of a new resource within the modules "video_send" and "log_send". Those functions will be called each time this happens regardless of the resource and so the resource up function should use pattern matching like that pictured below to only concern itself with the resources it needs to act upon.
 </p>
 
-```
-resource_up({system_logger, Instance}) ->
+<pre>resource_up({system_logger, Instance}) -&gt;
   ... do stuff ...
-resource_up(_DontCare) ->
-    ok.
-'''
+resource_up(_DontCare) -&gt;
+    ok.</pre>
 
 <h2>Getting into an Erlang Cloud</h2>
 
@@ -115,31 +114,25 @@ resource_up(_DontCare) ->
 Getting into an Erlang node cluster is required as a minimal bootstrap for Resource Discovery.  To accomplish initial contact by pinging remote nodes already in the desired cloud the following entries should be in your Erlang config file. 
 </p>
 
-```
-{resource_discovery, 
+<pre>{resource_discovery, 
   [
     {contact_nodes, [node1@mynet.com, node2@mynet.com]}    
   ]
-}
-'''
+}</pre>
 
 <p>
 These entries instruct resource discovery to ping node1 and node2 in order to join an Erlang cloud.  At least one of the pings must succeed in order for startup to succeed. Optionally all this can be overridden at the command line with the -contact_node flag:
 </p>
 
-```
-erl ... -contact_node node3@mynet.com
-'''
+<pre>erl ... -contact_node node3@mynet.com</pre>
 
 <p>
 The above flag set at startup would instruct Resource Discovery to ping node3 instead of those configured in the config file. In the future a plugin scheme will be added so that other methods of bootstrapping into a cloud may be added. An easy way to get up and running for a test is to fire up the first node pointing to itself and then additional nodes pointing to the first as in the following example: (remember that "Macintosh" should be replaced with your local sname suffix)
 </p>
 
-```
-erl -sname a -contact_node a@Macintosh
+<pre>erl -sname a -contact_node a@Macintosh
 erl -sname b -contact_node a@Macintosh
-erl -sname c -contact_node a@Macintosh
-'''
+erl -sname c -contact_node a@Macintosh</pre>
 
 <h2>Overcomming network and resource failures with heartbeating</h2>
 
@@ -147,13 +140,11 @@ erl -sname c -contact_node a@Macintosh
 At times resources fail and are perhaps taken out of the store of Cached Resource Tuples by an application when it discovers the resource is no longer around. At other times networks may fail and clusters become separated. One way of overcomming all of this is to setup heartbeats from Resource Discovery. Resource discovery can be configured to heartbeat at a specified interval. This means that it will both re-ping the configured contact nodes and will run a trade_resources/0 at the specified interval. To enable this place configuration similar to what is below in you Erlang config file.
 </p>
 
-```
-{resource_discovery, 
+<pre>{resource_discovery, 
   [
     {heartbeat_frequency, 60000}    
   ]
-}
-'''
+}</pre>
 
 <p>
 An entry like that above tells Resource Discovery to ping every 60000 milliseconds, or one minute. An entry of 0 disables heartbeating all together and is the default if not configured.
@@ -163,5 +154,8 @@ An entry like that above tells Resource Discovery to ping every 60000 millisecon
 Enjoy! Send questions of comments to erlware-questions@erlware.org or erlware-dev@erlware.org.
 </p>
 
-@author Martin Logan <martinjlogan@erlware.org>
-@copyright 2010 Erlware
+<hr>
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Oct 28 2010, 20:25:38.</i></p>
+</body>
+</html>

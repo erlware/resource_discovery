@@ -2,12 +2,21 @@ The Resource Discovery Application
 Martin Logan (martinjlogan@erlware.org).
 ==================================
 
+This is a version forked from https://github.com/erlware/resource_discovery with rebar used as a build system.
+
+*WARNING!*
+I somewhat modified original source code to customise for my needs, these changes might not be suitable for your project.
+You might be better off with original codebase.
+
+
+
 Manual build instructions
 =========================
 
-the resource discovery app itself is located in lib/resource_discovery
+1. clone / build rebar from here: https://github.com/basho/rebar
+2. clone project: git clone git@github.com:RomanShestakov/Resource_discovery.git
+3. build the project: cd resource_discovery;make 
 
-erlc -I <path_to_eunit>/include -I ./lib/resource_discovery/include -o ./lib/resource_discovery/ebin ./lib/resource_discovery/src/*erl
 
 Overview
 ========

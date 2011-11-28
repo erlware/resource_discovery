@@ -42,6 +42,7 @@ do_until(F, [H|T]) ->
 %%--------------------------------------------------------------------
 -spec sync_ping(node(), timeout()) -> pang | pong.
 sync_ping(Node, Timeout) ->
+    log4erl:info("pinging node: ~p", [Node]),
     case net_adm:ping(Node) of
         pong ->
 	    NumNodes = get_number_of_remote_nodes(Node),
@@ -49,14 +50,13 @@ sync_ping(Node, Timeout) ->
                 true  -> pong;
                 false -> pang
             end;
-        pang ->
-            pang
+        pang -> pang
     end.
 
 get_number_of_remote_nodes(Node) ->
     try
 	Nodes = rpc:call(Node, erlang, nodes, [known]),
-	error_logger:info_msg("contact node has ~p~n", [Nodes]),
+	log4erl:info("contact node has ~p", [Nodes]),
 	length(Nodes)
     catch
 	_C:_E ->
@@ -98,8 +98,8 @@ poll_until(Fun, Iterations, PauseMS) ->
 -spec get_env(atom(), term()) -> term().
 get_env(Key, Default) ->
     case application:get_env(resource_discovery, Key) of
-	{ok, Value} -> Value;
-	undefined   -> Default
+	{ok, Value} -> {ok, Value};
+	undefined   -> {ok, Default}
     end.
 	    
 

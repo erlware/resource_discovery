@@ -1,0 +1,12 @@
+io:format("starting Erlang shell, executing .erlang ~n").
+Dir = filename:absname(".").
+BaseDir = filename:join(lists:reverse(lists:nthtail(2, lists:reverse(filename:split(Dir))))).
+io:format("current dir: ~p; base dir: ~p ~n", [Dir, BaseDir]).
+code:add_patha(".").
+code:add_patha("./ebin").
+code:add_patha(filename:join(BaseDir, "ebin")).
+code:add_patha(filename:join(BaseDir, "deps/log4erl/ebin")).
+code:add_patha(filename:join(BaseDir, "deps/mochiweb/ebin")).
+
+c:cd("..").
+io:format("changed dir to: ~p ~n", [filename:absname(".")]).

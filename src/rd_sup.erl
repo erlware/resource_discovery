@@ -14,7 +14,7 @@
 %% External exports
 %%--------------------------------------------------------------------
 -export([
-         start_link/1
+         start_link/0
         ]).
 
 %%--------------------------------------------------------------------
@@ -42,7 +42,7 @@
 %% @spec start_link(StartArgs) -> {ok, Pid}
 %% @end
 %%--------------------------------------------------------------------
-start_link(_) ->
+start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 %%====================================================================
@@ -59,7 +59,6 @@ init([]) ->
     RestartStrategy    = one_for_one,
     MaxRestarts        = 1000,
     MaxTimeBetRestarts = 3600,
-
     SupFlags = {RestartStrategy, MaxRestarts, MaxTimeBetRestarts},
 
     ChildSpecs = 

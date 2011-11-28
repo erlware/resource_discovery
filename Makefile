@@ -14,6 +14,7 @@ clean:
 	rm -rf test/*.config
 
 test: all
+	mkdir -p .eunit
 	cp -r etc .eunit/.
 	ERL_FLAGS="-sname rebar" $(REBAR) skip_deps=true eunit
 

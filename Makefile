@@ -9,6 +9,7 @@ compile:
 	$(REBAR) compile
 
 clean:
+	$(REBAR) clean
 	rm -rf ebin/*.*
 	rm -rf test/*.beam
 	rm -rf test/*.config

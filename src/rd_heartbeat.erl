@@ -37,7 +37,7 @@ start_link(Frequency) ->
 %% @equiv start_link(0) 
 start_link() ->
     %% The default value is 0 which indicates no heartbeating. 
-    Frequency = rd_util:get_env(heartbeat_frequency, 60000),
+    {ok,Frequency} = rd_util:get_env(heartbeat_frequency, 60000),
     start_link(Frequency).
 
 %%====================================================================
@@ -100,7 +100,7 @@ handle_info(timeout, State = #state{frequency = Frequency}) ->
 %% Returns: any (ignored by gen_server)
 %%--------------------------------------------------------------------
 terminate(Reason, _State) ->
-    error_logger:info_msg("stoppping resource discovery hearbeat ~p~n", [Reason]),
+    log4erl:info("stoppping resource discovery hearbeat ~p", [Reason]),
     ok.
 
 %%--------------------------------------------------------------------

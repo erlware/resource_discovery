@@ -87,18 +87,19 @@ run(_P) ->
 rd_notification_test_() ->
     {setup,
      fun start_notify_loop/0,
-     fun(_Pid) -> resource_discovery:stop() end,
+     fun(Pid) -> stop_notify_loop(Pid) end,
      fun run_notify/1}.
 
 start_notify_loop() ->
     resource_discovery:start(),
     Pid = spawn(fun() -> loop(#state{}) end),
-    register(notify_loop_process, Pid).
+    register(notify_loop_process, Pid),
+    Pid.
 			 
-stop_notify_loop(_P) ->
+stop_notify_loop(Pid) ->
     resource_discovery:stop(),
-    notify_loop_process ! stop,
     unregister(notify_loop_process),
+    Pid ! stop,
     ok.
 
 run_notify(_Pid) ->

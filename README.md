@@ -1,14 +1,8 @@
 The Resource Discovery Application
-Martin Logan (martinjlogan@erlware.org).
 ==================================
 
-This is a version forked from https://github.com/erlware/resource_discovery with rebar used as a build system.
-
-*WARNING!*
-I somewhat modified original source code to customise for my needs, these changes might not be suitable for your project.
-You might be better off with original codebase.
-
-
+### Authored by: Martin J. Logan @martinjlogan martinjlogan@erlware.org
+### Many improvements by: Roman Shestakov
 
 Manual build instructions
 =========================

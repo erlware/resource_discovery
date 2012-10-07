@@ -1,11 +1,9 @@
-%%%-------------------------------------------------------------------
-%%% @author Martin Logan <martinjlogan@Macintosh.local>
+%%% @author Martin Logan <martinjlogan@erlware.org>
 %%% @copyright (C) 2010, Martin Logan
 %%% @doc
 %%%
 %%% @end
 %%% Created : 28 Oct 2010 by Martin Logan <martinjlogan@Macintosh.local>
-%%%-------------------------------------------------------------------
 -module(rd_util).
 
 %% API
@@ -20,11 +18,8 @@
 %%% API
 %%%===================================================================
 
-%%----------------------------------------------------------------------------
 %% @doc Applies a fun to all elements of a list until getting a non false
 %%      return value from the passed in fun.
-%% @end
-%%----------------------------------------------------------------------------
 -spec do_until(term(), list()) -> term() | false.
 do_until(_F, []) ->
     false;
@@ -36,34 +31,25 @@ do_until(F, [H|T]) ->
 	Return -> Return
     end.
     
-%%--------------------------------------------------------------------
 %% @doc Pings a node and returns only after the net kernal distributes the nodes.
-%% @end
-%%--------------------------------------------------------------------
 -spec sync_ping(node(), timeout()) -> pang | pong.
 sync_ping(Node, Timeout) ->
     log4erl:info("pinging node: ~p", [Node]),
     case net_adm:ping(Node) of
         pong ->
-	    NumNodes = get_number_of_remote_nodes(Node),
-            case poll_until(fun() -> NumNodes == length(nodes(known)) end, 10, Timeout div 10) of
+	    Resp = 
+		poll_until(fun() -> 
+				   length(get_remote_nodes(Node)) == length(nodes()) 
+			   end, 
+			   10, Timeout div 10),
+            case Resp of
                 true  -> pong;
                 false -> pang
             end;
-        pang -> pang
+        pang -> 
+	    pang
     end.
 
-get_number_of_remote_nodes(Node) ->
-    try
-	Nodes = rpc:call(Node, erlang, nodes, [known]),
-	log4erl:info("contact node has ~p", [Nodes]),
-	length(Nodes)
-    catch
-	_C:_E ->
-	    throw("failed to connect to contact node")
-    end.
-
-%%--------------------------------------------------------------------
 %% @doc This is a higher order function that allows for Iterations
 %%      number of executions of Fun until false is not returned 
 %%      from the Fun pausing for PauseMS after each execution.
@@ -74,8 +60,6 @@ get_number_of_remote_nodes(Node) ->
 %%  PauseMS - The number of miliseconds to wait inbetween each iteration.
 %%  Return - What ever the fun returns.
 %% </pre>
-%% @end
-%%--------------------------------------------------------------------
 -spec poll_until(term(), timeout(), timeout()) -> term() | false.
 poll_until(Fun, 0, _PauseMS) ->
     Fun();
@@ -91,10 +75,7 @@ poll_until(Fun, Iterations, PauseMS) ->
             Reply
     end.
 
-%%--------------------------------------------------------------------
 %% @doc Get application data but provide a default.
-%% @end
-%%--------------------------------------------------------------------
 -spec get_env(atom(), term()) -> term().
 get_env(Key, Default) ->
     case application:get_env(resource_discovery, Key) of
@@ -107,3 +88,15 @@ get_env(Key, Default) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+
+get_remote_nodes(Node) ->
+    try
+	Nodes = rpc:call(Node, erlang, nodes, []),
+	log4erl:info("contact node has ~p", [Nodes]),
+	Nodes
+    catch
+	_C:_E ->
+	    throw("failed to connect to contact node")
+    end.
+

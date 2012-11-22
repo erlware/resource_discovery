@@ -96,7 +96,8 @@ get_remote_nodes(Node) ->
 	log4erl:info("contact node has ~p", [Nodes]),
 	Nodes
     catch
-	_C:_E ->
-	    throw("failed to connect to contact node")
+	_C:E ->
+	    log4erl:info("failed to connect to contact node ~p", [Node]),
+	    throw(E)
     end.
 

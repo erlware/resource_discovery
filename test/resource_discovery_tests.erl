@@ -133,11 +133,11 @@ run_notify(_Pid) ->
 %% function which is called when event happens
 %% for test we only care when resource 'e' becomes available
 resource_up({e, R}) ->
-    log4erl:info("resource is up ~p: ~p", [e, R]),
+    error_logger:info_msg("resource is up ~p: ~p", [e, R]),
     %% callback happend, set state in loop process, so it could be verified in test
     set_state(true);   
 resource_up(Other) ->
-    log4erl:info("resource is up, dont' care: ~p", [Other]).
+    error_logger:info_msg("resource is up, dont' care: ~p", [Other]).
 
 get_state() ->
     notify_loop_process ! {self(), get},

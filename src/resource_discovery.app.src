@@ -25,8 +25,7 @@
   {applications,
    [
     kernel, 
-    stdlib,
-    log4erl
+    stdlib
    ]},
 
   % configuration parameters
@@ -35,8 +34,7 @@
   % The M F A to start this application.
   {mod, {resource_discovery,
 	 [
-	  {heartbeat_frequency, 60000},
-	  {log4erl_config, "etc/log4erl.conf"}
+	  {heartbeat_frequency, 60000}
 	 ]}}
  ]
 }.

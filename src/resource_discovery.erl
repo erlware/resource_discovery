@@ -78,10 +78,6 @@
 %%====================================================================
 
 start() ->
-    application:start(log4erl),
-    {ok, Log} = rd_util:get_env(log4erl_config, "etc/log4erl.conf"),
-    log4erl:conf(Log),
-    log4erl:info("starting resource_discovery..."),
     application:start(resource_discovery).
 
 %%--------------------------------------------------------------------
@@ -117,7 +113,7 @@ sync_resources(Timeout) ->
     sync_locals(),
     Self = self(),
     Nodes = nodes(known),
-    log4erl:info("synching resources to nodes: ~p", [Nodes]),
+    error_logger:info_msg("synching resources to nodes: ~p", [Nodes]),
     LocalResourceTuples = rd_core:get_local_resource_tuples(),
     DeletedTuples = rd_core:get_deleted_resource_tuples(),
     TargetTypes = rd_core:get_target_resource_types(),
@@ -313,14 +309,14 @@ contact_nodes() ->
     contact_nodes(10000).
 
 ping_contact_nodes([], _Timeout) ->
-    log4erl:info("No contact node specified. Potentially running in a standalone node", []),
+    error_logger:info_msg("No contact node specified. Potentially running in a standalone node", []),
     {error, no_contact_node};
 ping_contact_nodes(Nodes, Timeout) ->
     Reply = rd_util:do_until(fun(Node) ->
 			     case rd_util:sync_ping(Node, Timeout) of
 				 pong -> true;
 				 pang ->
-				     log4erl:info("ping contact node at ~p failed", [Node]), 
+				     error_logger:info_msg("ping contact node at ~p failed", [Node]), 
 				     false
 			     end
 		     end,
@@ -344,14 +340,14 @@ ping_contact_nodes(Nodes, Timeout) ->
 rpc_call(Type, Module, Function, Args, Timeout) ->
     case get_resource(Type) of
 	{ok, Resource} -> 
-	    log4erl:info("got a resource ~p", [Resource]),
+	    error_logger:info_msg("got a resource ~p", [Resource]),
 	    case rpc:call(Resource, Module, Function, Args, Timeout) of
 		{badrpc, Reason} ->
-		    log4erl:info("got a badrpc ~p", [Reason]),
+		    error_logger:info_msg("got a badrpc ~p", [Reason]),
 		    delete_resource_tuple({Type, Resource}),
 		    rpc_call(Type, Module, Function, Args, Timeout);
 		Reply ->
-		    log4erl:info("result of rpc was ~p", [Reply]),
+		    error_logger:info_msg("result of rpc was ~p", [Reply]),
 		    Reply
 	    end;
         {error, not_found} -> {error, not_found}
@@ -372,7 +368,7 @@ rpc_multicall(Type, Module, Function, Args, Timeout) ->
     case get_resources(Type) of
         [] -> {error, no_resources};
 	Resources -> 
-	    log4erl:info("got resources ~p", [Resources]),
+	    error_logger:info_msg("got resources ~p", [Resources]),
 	    {Resl, BadNodes} = rpc:multicall(Resources, Module, Function, Args, Timeout),
 	    [delete_resource_tuple({Type, BadNode}) || BadNode <- BadNodes],
 	    {Resl, BadNodes}

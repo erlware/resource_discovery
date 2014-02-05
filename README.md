@@ -43,21 +43,29 @@ Using these definitions we can describe the relationships that we have between o
 
 Local Resources Tuples contain those resources that a running Erlang node has to share with the cluster. A Video Display Agent node could make a call like what is below to express what it has to share with the network.
 
+```
 resource_discovery:add_local_resource_tuples({video_producer, node()}).
+```
 
 A Video Producer node needs to know about the System Logger instance and about all instances of Video Display Agent nodes. To express this it could make a call like what is below to express this.
 
+```
 resource_discovery:add_target_resource_types([video_display, system_logger]).
+```
 
 This indicates that the Video Producer service wants to find out about all services in the cluster of resource types video_display and system_logger.
 
 Now we are set up for our system to obtain resource tuples from other nodes in the cluster and cache them locally. Cached Resource Tuples are those that have been discovered and are ready to be used. When each of the nodes comes up onto the network they will make one of the following calls:
 
+```
 resource_discovery:trade_resources().
+```
 
 or
 
+```
 resource_discovery:sync_resources().
+```
 
 This will communicate with all other nodes in the current network. When this function returns all Resource Tuples on the network that match the calling nodes Target Resource Types will be cached locally. Furthermore the local nodes Local Resource Tuples will be cached on all remote nodes that have specified their resource types as target resource types. trade_resources/0 accomplishes this asyncronously where as sync_resources is a blocking call which typically accomplishes a full sync before returning. After either of these calls have been made you can go about using the resources you have discovered.
 
@@ -66,46 +74,57 @@ Getting Notifications about New Resources
 
 Sometimes when resources become available in the cluster it is desirable for an application to be notified of their presence. If you want immediate notification of new Cached Resources you can subscribe to notifications by using:
 
+```
 resource_discovery:add_callback_modules([video_send, log_send]).
+```
 
 The above call will ensure that the exported function "resource_up/1" will be called upon the caching of a new resource within the modules "video_send" and "log_send". Those functions will be called each time this happens regardless of the resource and so the resource up function should use pattern matching like that pictured below to only concern itself with the resources it needs to act upon.
 
+```
 resource_up({system_logger, Instance}) ->
   ... do stuff ...
 resource_up(_DontCare) ->
     ok.
+```
 
 Getting into an Erlang Cloud
 ============================
 
 Getting into an Erlang node cluster is required as a minimal bootstrap for Resource Discovery. To accomplish initial contact by pinging remote nodes already in the desired cloud the following entries should be in your Erlang config file.
 
+```
 {resource_discovery, 
   [
     {contact_nodes, [node1@mynet.com, node2@mynet.com]}    
   ]
 }
+```
 
 These entries instruct resource discovery to ping node1 and node2 in order to join an Erlang cloud. At least one of the pings must succeed in order for startup to succeed. Optionally all this can be overridden at the command line with the -contact_node flag:
 
+```
 erl ... -contact_node node3@mynet.com
+```
 
 The above flag set at startup would instruct Resource Discovery to ping node3 instead of those configured in the config file. In the future a plugin scheme will be added so that other methods of bootstrapping into a cloud may be added. An easy way to get up and running for a test is to fire up the first node pointing to itself and then additional nodes pointing to the first as in the following example: (remember that "Macintosh" should be replaced with your local sname suffix)
 
+```
 erl -sname a -contact_node a@Macintosh
 erl -sname b -contact_node a@Macintosh
 erl -sname c -contact_node a@Macintosh
-
-Overcomming network and resource failures with heartbeating
+```
+Overcoming network and resource failures with heartbeating
 ===========================================================
 
 At times resources fail and are perhaps taken out of the store of Cached Resource Tuples by an application when it discovers the resource is no longer around. At other times networks may fail and clusters become separated. One way of overcomming all of this is to setup heartbeats from Resource Discovery. Resource discovery can be configured to heartbeat at a specified interval. This means that it will both re-ping the configured contact nodes and will run a trade_resources/0 at the specified interval. To enable this place configuration similar to what is below in you Erlang config file.
 
+```
 {resource_discovery, 
   [
     {heartbeat_frequency, 60000}    
   ]
 }
+```
 
 An entry like that above tells Resource Discovery to ping on average every 60000 milliseconds (+- a random factor). An entry of 0 disables heartbeating all together and is the default if not configured.
 

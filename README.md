@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/erlware/resource_discovery.svg?branch=master)](https://travis-ci.org/RomanShestakov/resource_discovery)
+
 The Resource Discovery Application
 ==================================
 

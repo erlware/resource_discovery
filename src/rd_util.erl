@@ -11,7 +11,8 @@
 	 get_env/2,
 	 do_until/2,
 	 sync_ping/2,
-	 poll_until/3
+	 poll_until/3,
+     log/2
 	]).
 
 %%%===================================================================
@@ -30,7 +31,13 @@ do_until(F, [H|T]) ->
 	false  -> do_until(F, T);
 	Return -> Return
     end.
-    
+
+log(msg, args) ->
+    case rd_util:get_env(debug, false) of
+        true -> error_logger:info_msg(msg, args);
+        false -> ok
+    end.
+
 %% @doc Pings a node and returns only after the net kernal distributes the nodes.
 -spec sync_ping(node(), timeout()) -> pang | pong.
 sync_ping(Node, Timeout) ->

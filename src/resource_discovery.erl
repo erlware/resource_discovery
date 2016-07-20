@@ -113,7 +113,7 @@ sync_resources(Timeout) ->
     sync_locals(),
     Self = self(),
     Nodes = nodes(known),
-    error_logger:info_msg("synching resources to nodes: ~p", [Nodes]),
+    rd_util:log("synching resources to nodes: ~p", [Nodes]),
     LocalResourceTuples = rd_core:get_local_resource_tuples(),
     DeletedTuples = rd_core:get_deleted_resource_tuples(),
     TargetTypes = rd_core:get_target_resource_types(),
@@ -309,14 +309,14 @@ contact_nodes() ->
     contact_nodes(10000).
 
 ping_contact_nodes([], _Timeout) ->
-    error_logger:info_msg("No contact node specified. Potentially running in a standalone node", []),
+    rd_util:log("No contact node specified. Potentially running in a standalone node", []),
     {error, no_contact_node};
 ping_contact_nodes(Nodes, Timeout) ->
     Reply = rd_util:do_until(fun(Node) ->
 			     case rd_util:sync_ping(Node, Timeout) of
 				 pong -> true;
 				 pang ->
-				     error_logger:info_msg("ping contact node at ~p failed", [Node]), 
+				     rd_util:log("ping contact node at ~p failed", [Node]), 
 				     false
 			     end
 		     end,
@@ -340,14 +340,14 @@ ping_contact_nodes(Nodes, Timeout) ->
 rpc_call(Type, Module, Function, Args, Timeout) ->
     case get_resource(Type) of
 	{ok, Resource} -> 
-	    error_logger:info_msg("got a resource ~p", [Resource]),
+	    rd_util:log("got a resource ~p", [Resource]),
 	    case rpc:call(Resource, Module, Function, Args, Timeout) of
 		{badrpc, Reason} ->
-		    error_logger:info_msg("got a badrpc ~p", [Reason]),
+		    rd_util:log("got a badrpc ~p", [Reason]),
 		    delete_resource_tuple({Type, Resource}),
 		    rpc_call(Type, Module, Function, Args, Timeout);
 		Reply ->
-		    error_logger:info_msg("result of rpc was ~p", [Reply]),
+		    rd_util:log("result of rpc was ~p", [Reply]),
 		    Reply
 	    end;
         {error, not_found} -> {error, not_found}
@@ -368,7 +368,7 @@ rpc_multicall(Type, Module, Function, Args, Timeout) ->
     case get_resources(Type) of
         [] -> {error, no_resources};
 	Resources -> 
-	    error_logger:info_msg("got resources ~p", [Resources]),
+	    rd_util:log("got resources ~p", [Resources]),
 	    {Resl, BadNodes} = rpc:multicall(Resources, Module, Function, Args, Timeout),
 	    [delete_resource_tuple({Type, BadNode}) || BadNode <- BadNodes],
 	    {Resl, BadNodes}

@@ -198,7 +198,7 @@ all_of_type_get(Type) ->
 %%-----------------------------------------------------------------------
 %%-spec sync_resources(node(), {LocalResourceTuples, TargetTypes, DeletedTuples}) -> ok.
 sync_resources(Node, {LocalResourceTuples, TargetTypes, DeletedTuples}) ->
-    error_logger:info_msg("synch resources for node: ~p", [Node]),
+    rd_util:log("synch resources for node: ~p", [Node]),
     {ok, FilteredRemotes} = gen_server:call({?SERVER, Node}, {sync_resources, {LocalResourceTuples, TargetTypes, DeletedTuples}}),
     rd_store:store_resource_tuples(FilteredRemotes),
     make_callbacks(FilteredRemotes),
@@ -256,12 +256,12 @@ init([]) ->
     {ok, #state{}}.
 
 handle_call({sync_resources, {Remotes, RemoteTargetTypes, RemoteDeletedTuples}}, _From, State) ->
-    error_logger:info_msg("sync_resources, got remotes: ~p deleted: ~p", [Remotes, RemoteDeletedTuples]),
+    rd_util:log("sync_resources, got remotes: ~p deleted: ~p", [Remotes, RemoteDeletedTuples]),
     LocalResourceTuples = rd_store:get_local_resource_tuples(),
     TargetTypes = rd_store:get_target_resource_types(),
     FilteredRemotes = filter_resource_tuples_by_types(TargetTypes, Remotes),
     FilteredLocals = filter_resource_tuples_by_types(RemoteTargetTypes, LocalResourceTuples),
-    error_logger:info_msg("sync_resources, storing filted remotes: ~p", [FilteredRemotes]),
+    rd_util:log("sync_resources, storing filted remotes: ~p", [FilteredRemotes]),
     rd_store:store_resource_tuples(FilteredRemotes),
     [rd_store:delete_resource_tuple(DR) || DR <- RemoteDeletedTuples],
     make_callbacks(FilteredRemotes),
@@ -327,14 +327,14 @@ handle_cast(trade_resources, State) ->
     rd_store:delete_deleted_resource_tuple(),
     {noreply, State};
 handle_cast({trade_resources, {ReplyTo, {Remotes, RemoteDeletedTuples}}}, State) ->
-    error_logger:info_msg("trade_resources, got remotes ~p: deleted: ~p", [Remotes, RemoteDeletedTuples]),
+    rd_util:log("trade_resources, got remotes ~p: deleted: ~p", [Remotes, RemoteDeletedTuples]),
     Locals = rd_store:get_local_resource_tuples(),
     LocalsDeleted = rd_store:get_deleted_resource_tuples(),
     TargetTypes = rd_store:get_target_resource_types(),
     FilteredRemotes = filter_resource_tuples_by_types(TargetTypes, Remotes),
-    error_logger:info_msg("got remotes and filtered ~p", [FilteredRemotes]),
+    rd_util:log("got remotes and filtered ~p", [FilteredRemotes]),
     rd_store:store_resource_tuples(FilteredRemotes),
-    error_logger:info_msg("trade_resources, deleting ~p", [RemoteDeletedTuples]),
+    rd_util:log("trade_resources, deleting ~p", [RemoteDeletedTuples]),
     [rd_store:delete_resource_tuple(DR) || DR <- RemoteDeletedTuples],
     make_callbacks(FilteredRemotes),
     reply(ReplyTo, {Locals, LocalsDeleted}),

@@ -12,7 +12,7 @@
 	 do_until/2,
 	 sync_ping/2,
 	 poll_until/3,
-	 log/2
+     log/2
 	]).
 
 %%%===================================================================
@@ -32,38 +32,38 @@ do_until(F, [H|T]) ->
 	Return -> Return
     end.
 
-log(msg, args) ->
-    case rd_util:get_env(debug, false) of
-        true -> error_logger:info_msg(msg, args);
-        false -> ok
+log(Msg, Args) ->
+    case get_env(debug, false) of
+        {ok, true} -> error_logger:info_msg(Msg, Args);
+        {ok, false} -> ok
     end.
 
 %% @doc Pings a node and returns only after the net kernal distributes the nodes.
 -spec sync_ping(node(), timeout()) -> pang | pong.
 sync_ping(Node, Timeout) ->
-    error_logger:info_msg("pinging node: ~p", [Node]),
+    log("pinging node: ~p", [Node]),
     case net_adm:ping(Node) of
         pong ->
-	    Resp = 
-		poll_until(fun() -> 
-				   length(get_remote_nodes(Node)) == length(nodes()) 
-			   end, 
+	    Resp =
+		poll_until(fun() ->
+				   length(get_remote_nodes(Node)) == length(nodes())
+			   end,
 			   10, Timeout div 10),
             case Resp of
                 true  -> pong;
                 false -> pang
             end;
-        pang -> 
+        pang ->
 	    pang
     end.
 
 %% @doc This is a higher order function that allows for Iterations
-%%      number of executions of Fun until false is not returned 
+%%      number of executions of Fun until false is not returned
 %%      from the Fun pausing for PauseMS after each execution.
 %% <pre>
 %% Variables:
 %%  Fun - A fun to execute per iteration.
-%%  Iterations - The maximum number of iterations to try getting Reply out of Fun.  
+%%  Iterations - The maximum number of iterations to try getting Reply out of Fun.
 %%  PauseMS - The number of miliseconds to wait inbetween each iteration.
 %%  Return - What ever the fun returns.
 %% </pre>
@@ -72,13 +72,13 @@ poll_until(Fun, 0, _PauseMS) ->
     Fun();
 poll_until(Fun, Iterations, PauseMS) ->
     case Fun() of
-        false -> 
+        false ->
             timer:sleep(PauseMS),
-            case Iterations of 
+            case Iterations of
                 infinity   -> poll_until(Fun, Iterations, PauseMS);
                 Iterations -> poll_until(Fun, Iterations - 1, PauseMS)
             end;
-        Reply -> 
+        Reply ->
             Reply
     end.
 
@@ -89,7 +89,7 @@ get_env(Key, Default) ->
 	{ok, Value} -> {ok, Value};
 	undefined   -> {ok, Default}
     end.
-	    
+
 
 
 %%%===================================================================
@@ -100,7 +100,7 @@ get_env(Key, Default) ->
 get_remote_nodes(Node) ->
     try
 	Nodes = rpc:call(Node, erlang, nodes, []),
-	error_logger:info_msg("contact node has ~p", [Nodes]),
+	log("contact node has ~p", [Nodes]),
 	Nodes
     catch
 	_C:E ->

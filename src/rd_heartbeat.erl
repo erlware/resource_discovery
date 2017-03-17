@@ -9,7 +9,7 @@
 -behaviour(gen_server).
 
 %% External exports
--export([start_link/1, start_link/0]).
+-export([ start_link/1, start_link/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -32,13 +32,13 @@
 %%--------------------------------------------------------------------
 -spec start_link(non_neg_integer()) -> {ok, pid()}.
 start_link(Frequency) ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [Frequency], []).
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Frequency], []).
 
 %% @equiv start_link(0) 
 start_link() ->
-  %% The default value is 0 which indicates no heartbeating.
-  {ok, Frequency} = rd_util:get_env(heartbeat_frequency, 60000),
-  start_link(Frequency).
+    %% The default value is 0 which indicates no heartbeating. 
+    {ok,Frequency} = rd_util:get_env(heartbeat_frequency, 60000),
+    start_link(Frequency).
 
 %%====================================================================
 %% Server functions
@@ -53,8 +53,8 @@ start_link() ->
 %%          {stop, Reason}
 %%--------------------------------------------------------------------
 init([Frequency]) ->
-  ok = resource_discovery:contact_nodes(),
-  {ok, #state{frequency = Frequency}, Frequency}.
+    ok = resource_discovery:contact_nodes(),
+    {ok, #state{frequency = Frequency}, Frequency}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_call/3
@@ -67,7 +67,7 @@ init([Frequency]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%--------------------------------------------------------------------
 handle_call(_Request, _From, State) ->
-  {reply, ok, State}.
+    {reply, ok, State}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_cast/2
@@ -77,7 +77,7 @@ handle_call(_Request, _From, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%--------------------------------------------------------------------
 handle_cast(_Msg, State) ->
-  {noreply, State}.
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_info/2
@@ -87,12 +87,12 @@ handle_cast(_Msg, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%--------------------------------------------------------------------
 handle_info(timeout, State = #state{frequency = 0}) ->
-  {stop, normal, State};
+    {stop, normal, State};
 handle_info(timeout, State = #state{frequency = Frequency}) ->
-  resource_discovery:contact_nodes(),
-  resource_discovery:trade_resources(),
-  %% Wait for approximately the frequency with a random factor.
-  {noreply, State, random:uniform(Frequency div 2) + (Frequency div 2) + Frequency div 3}.
+    resource_discovery:contact_nodes(),
+    resource_discovery:trade_resources(),
+    %% Wait for approximately the frequency with a random factor.
+    {noreply, State, random:uniform(Frequency div 2) + (Frequency div 2) + Frequency div 3}.
 
 %%--------------------------------------------------------------------
 %% Function: terminate/2
@@ -100,8 +100,8 @@ handle_info(timeout, State = #state{frequency = Frequency}) ->
 %% Returns: any (ignored by gen_server)
 %%--------------------------------------------------------------------
 terminate(Reason, _State) ->
-  error_logger:info_msg("stoppping resource discovery hearbeat ~p", [Reason]),
-  ok.
+    error_logger:info_msg("stoppping resource discovery hearbeat ~p", [Reason]),
+    ok.
 
 %%--------------------------------------------------------------------
 %% Func: code_change/3
@@ -109,5 +109,5 @@ terminate(Reason, _State) ->
 %% Returns: {ok, NewState}
 %%--------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
-  {ok, State}.
+    {ok, State}.
 
